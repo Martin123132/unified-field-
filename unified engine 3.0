@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate MBT Physics Engine - Working Version</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-areas: 
+                "header header header"
+                "sidebar viewport controls"
+                "stats graphs ai";
+            grid-template-columns: 200px 1fr 200px;
+            grid-template-rows: 60px 1fr 150px;
+            height: 100vh;
+            gap: 10px;
+            padding: 10px;
+        }
+        
+        .header {
+            grid-area: header;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            background: linear-gradient(45deg, #00ff88, #0099ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 1.5em;
+        }
+        
+        .sidebar, .controls, .stats, .graphs, .ai {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-y: auto;
+        }
+        
+        .sidebar { grid-area: sidebar; }
+        .controls { grid-area: controls; }
+        .stats { grid-area: stats; }
+        .graphs { grid-area: graphs; }
+        .ai { grid-area: ai; }
+        
+        .viewport {
+            grid-area: viewport;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 10px;
+            border: 2px solid rgba(0, 255, 136, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .section-title {
+            color: #00ff88;
+            font-size: 1em;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.3);
+            padding-bottom: 5px;
+        }
+        
+        .tool-btn, .preset-btn {
+            width: 100%;
+            padding: 8px;
+            margin: 3px 0;
+            border: none;
+            border-radius: 5px;
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.3), rgba(0, 153, 255, 0.3));
+            color: white;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+        }
+        
+        .tool-btn:hover, .preset-btn:hover {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.6), rgba(0, 153, 255, 0.6));
+            transform: translateY(-1px);
+        }
+        
+        .tool-btn.active {
+            background: linear-gradient(135deg, #00ff88, #0099ff);
+        }
+        
+        .main-btn {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #00ff88, #0099ff);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .main-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.4);
+        }
+        
+        .main-btn.active {
+            background: linear-gradient(135deg, #ff0099, #ff6b35);
+        }
+        
+        .param-group {
+            margin-bottom: 10px;
+        }
+        
+        .param-label {
+            display: block;
+            color: #0099ff;
+            font-size: 0.8em;
+            margin-bottom: 5px;
+        }
+        
+        .param-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+        }
+        
+        .param-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #00ff88, #0099ff);
+            cursor: pointer;
+        }
+        
+        .param-value {
+            text-align: center;
+            font-size: 0.7em;
+            color: #00ff88;
+            margin-top: 3px;
+        }
+        
+        .metric {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            padding: 8px;
+            margin: 5px 0;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #00ff88;
+        }
+        
+        .metric-label {
+            font-size: 0.7em;
+            opacity: 0.8;
+        }
+        
+        .canvas-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 8px;
+            padding: 8px;
+            height: 100%;
+        }
+        
+        .canvas-panel {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            padding: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .canvas-title {
+            text-align: center;
+            font-size: 0.7em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            padding: 3px;
+            border-radius: 3px;
+        }
+        
+        .canvas-title.quantum { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .canvas-title.atomic { background: rgba(255, 107, 53, 0.2); color: #ff6b35; }
+        .canvas-title.molecular { background: rgba(78, 205, 196, 0.2); color: #4ecdc4; }
+        .canvas-title.orbital { background: rgba(255, 230, 109, 0.2); color: #ffe66d; }
+        .canvas-title.cosmic { background: rgba(199, 206, 234, 0.2); color: #c7ceea; }
+        .canvas-title.energy { background: rgba(255, 105, 180, 0.2); color: #ff69b4; }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+            cursor: crosshair;
+        }
+        
+        .ai-discovery {
+            background: rgba(255, 105, 180, 0.1);
+            border: 1px solid rgba(255, 105, 180, 0.3);
+            border-radius: 5px;
+            padding: 8px;
+            margin: 5px 0;
+            font-size: 0.7em;
+        }
+        
+        .controls-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+        }
+        
+        .toggle-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 0, 153, 0.7);
+            color: white;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+        
+        .status-info {
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌌 Ultimate MBT Physics Engine</h1>
+            <div class="controls-header">
+                <button class="main-btn" id="playBtn" onclick="toggleSimulation()">▶️ START</button>
+                <button class="main-btn" onclick="resetAll()">🔄 RESET</button>
+            </div>
+            <div class="status-info">
+                <div>FPS: <span id="fps">0</span></div>
+                <div>Time: <span id="simTime">0.0s</span></div>
+                <div>Particles: <span id="particleCount">0</span></div>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="section-title">🎮 Tools</div>
+            <button class="tool-btn active" data-tool="quantum">⚛️ Quantum</button>
+            <button class="tool-btn" data-tool="atom">🔴 Atom</button>
+            <button class="tool-btn" data-tool="molecule">🧬 Molecule</button>
+            <button class="tool-btn" data-tool="planet">🪐 Planet</button>
+            <button class="tool-btn" data-tool="energy">⚡ Energy</button>
+            <button class="tool-btn" data-tool="blackhole">🕳️ Black Hole</button>
+            
+            <div class="section-title">🎬 Presets</div>
+            <button class="preset-btn" onclick="loadPreset('hydrogen')">⚛️ Hydrogen</button>
+            <button class="preset-btn" onclick="loadPreset('water')">💧 Water</button>
+            <button class="preset-btn" onclick="loadPreset('solar')">☀️ Solar System</button>
+            <button class="preset-btn" onclick="loadPreset('galaxy')">🌌 Galaxy</button>
+            <button class="preset-btn" onclick="loadPreset('consciousness')">🧠 Consciousness</button>
+        </div>
+        
+        <div class="viewport">
+            <div class="controls-toggle">
+                <button class="toggle-btn" onclick="toggleAI()">🤖 AI</button>
+            </div>
+            
+            <div class="canvas-grid">
+                <div class="canvas-panel">
+                    <div class="canvas-title quantum">🔬 QUANTUM FIELD</div>
+                    <canvas id="quantumCanvas" width="250" height="180"></canvas>
+                </div>
+                <div class="canvas-panel">
+                    <div class="canvas-title atomic">⚛️ ATOMIC STRUCTURE</div>
+                    <canvas id="atomicCanvas" width="250" height="180"></canvas>
+                </div>
+                <div class="canvas-panel">
+                    <div class="canvas-title molecular">🧬 MOLECULAR BONDS</div>
+                    <canvas id="molecularCanvas" width="250" height="180"></canvas>
+                </div>
+                <div class="canvas-panel">
+                    <div class="canvas-title orbital">🪐 ORBITAL MECHANICS</div>
+                    <canvas id="orbitalCanvas" width="250" height="180"></canvas>
+                </div>
+                <div class="canvas-panel">
+                    <div class="canvas-title cosmic">🌌 COSMIC STRUCTURE</div>
+                    <canvas id="cosmicCanvas" width="250" height="180"></canvas>
+                </div>
+                <div class="canvas-panel">
+                    <div class="canvas-title energy">⚡ ENERGY FIELDS</div>
+                    <canvas id="energyCanvas" width="250" height="180"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="section-title">⚙️ Physics</div>
+            
+            <div class="param-group">
+                <label class="param-label">α - Coupling</label>
+                <input type="range" class="param-slider" id="alpha" min="0.1" max="3.0" step="0.1" value="1.0">
+                <div class="param-value" id="alpha-value">1.0</div>
+            </div>
+            
+            <div class="param-group">
+                <label class="param-label">β - Decay</label>
+                <input type="range" class="param-slider" id="beta" min="0.1" max="2.0" step="0.1" value="0.5">
+                <div class="param-value" id="beta-value">0.5</div>
+            </div>
+            
+            <div class="param-group">
+                <label class="param-label">γ - Width</label>
+                <input type="range" class="param-slider" id="gamma" min="0.5" max="5.0" step="0.1" value="2.0">
+                <div class="param-value" id="gamma-value">2.0</div>
+            </div>
+            
+            <div class="param-group">
+                <label class="param-label">🎮 Speed</label>
+                <input type="range" class="param-slider" id="speed" min="10" max="100" step="10" value="50">
+                <div class="param-value" id="speed-value">50ms</div>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="section-title">📊 Metrics</div>
+            <div class="metric quantum">
+                <div class="metric-value" id="quantumMetric">0.00</div>
+                <div class="metric-label">Quantum</div>
+            </div>
+            <div class="metric atomic">
+                <div class="metric-value" id="atomicMetric">0</div>
+                <div class="metric-label">Atoms</div>
+            </div>
+            <div class="metric molecular">
+                <div class="metric-value" id="molecularMetric">0.00</div>
+                <div class="metric-label">Bonds</div>
+            </div>
+        </div>
+        
+        <div class="graphs">
+            <div class="section-title">📈 Analysis</div>
+            <div id="graphArea" style="height: 80px; background: rgba(0,0,0,0.3); border-radius: 5px;">
+                <canvas id="graphCanvas" width="200" height="80"></canvas>
+            </div>
+        </div>
+        
+        <div class="ai">
+            <div class="section-title">🤖 AI Discoveries</div>
+            <div id="aiDiscoveries">
+                <div class="ai-discovery">🔬 Monitoring patterns...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // WORKING MBT PHYSICS ENGINE
+        class MBTEngine {
+            constructor() {
+                console.log('🌌 Starting MBT Engine...');
+                
+                this.gridSize = 32;
+                this.timeStep = 0;
+                this.simTime = 0;
+                this.isRunning = false;
+                this.currentTool = 'quantum';
+                this.aiEnabled = false;
+                
+                // Physics parameters
+                this.alpha = 1.0;
+                this.beta = 0.5;
+                this.gamma = 2.0;
+                this.speedMs = 50;
+                
+                // Performance
+                this.fps = 0;
+                this.lastTime = performance.now();
+                this.animationId = null;
+                
+                this.initializeFields();
+                this.setupCanvases();
+                this.setupControls();
+                this.startPerformanceMonitoring();
+                
+                console.log('✅ MBT Engine ready!');
+            }
+            
+            initializeFields() {
+                const size = this.gridSize;
+                
+                // Quantum field
+                this.quantum = {
+                    psi: Array(size).fill().map(() => Array(size).fill().map(() => ({
+                        real: (Math.random() - 0.5) * 0.1,
+                        imag: (Math.random() - 0.5) * 0.1
+                    }))),
+                    potential: Array(size).fill().map(() => Array(size).fill(0))
+                };
+                
+                // Other scales
+                this.atomic = Array(size).fill().map(() => Array(size).fill(0));
+                this.molecular = Array(size).fill().map(() => Array(size).fill(0));
+                this.orbital = {
+                    mass: Array(size).fill().map(() => Array(size).fill(0)),
+                    velocity: Array(size).fill().map(() => Array(size).fill().map(() => ({x: 0, y: 0})))
+                };
+                this.cosmic = Array(size).fill().map(() => Array(size).fill(1 + Math.random() * 0.1));
+                this.energy = Array(size).fill().map(() => Array(size).fill(0));
+                
+                this.particles = [];
+                this.maxParticles = 200;
+                
+                this.seedInitialConditions();
+            }
+            
+            seedInitialConditions() {
+                const center = this.gridSize / 2;
+                
+                // Quantum wave packet
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const r2 = (i - center) ** 2 + (j - center) ** 2;
+                        const amplitude = Math.exp(-r2 / 50);
+                        this.quantum.psi[i][j].real = amplitude * Math.cos(0.3 * i);
+                        this.quantum.psi[i][j].imag = amplitude * Math.sin(0.3 * i);
+                    }
+                }
+                
+                // Some atoms
+                for (let k = 0; k < 3; k++) {
+                    const x = 8 + k * 8;
+                    const y = Math.floor(center);
+                    if (x < this.gridSize) {
+                        this.atomic[x][y] = 1.0;
+                        this.quantum.potential[x][y] = -5.0;
+                    }
+                }
+            }
+            
+            setupCanvases() {
+                this.canvases = {};
+                this.contexts = {};
+                
+                const canvasIds = ['quantum', 'atomic', 'molecular', 'orbital', 'cosmic', 'energy'];
+                canvasIds.forEach(id => {
+                    this.canvases[id] = document.getElementById(id + 'Canvas');
+                    this.contexts[id] = this.canvases[id].getContext('2d');
+                    
+                    this.canvases[id].addEventListener('click', (e) => this.handleCanvasClick(id, e));
+                    this.canvases[id].addEventListener('contextmenu', (e) => e.preventDefault());
+                });
+                
+                // Graph canvas
+                this.graphCanvas = document.getElementById('graphCanvas');
+                this.graphCtx = this.graphCanvas.getContext('2d');
+                this.energyHistory = [];
+            }
+            
+            setupControls() {
+                // Tool selection
+                document.querySelectorAll('[data-tool]').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        this.currentTool = e.target.dataset.tool;
+                        document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                    });
+                });
+                
+                // Parameter sliders
+                ['alpha', 'beta', 'gamma', 'speed'].forEach(param => {
+                    const slider = document.getElementById(param);
+                    const valueDisplay = document.getElementById(`${param}-value`);
+                    
+                    slider.addEventListener('input', (e) => {
+                        const value = parseFloat(e.target.value);
+                        if (param === 'speed') {
+                            this.speedMs = value;
+                            valueDisplay.textContent = value + 'ms';
+                            if (this.isRunning) {
+                                this.stop();
+                                this.start();
+                            }
+                        } else {
+                            this[param] = value;
+                            valueDisplay.textContent = value.toFixed(1);
+                        }
+                    });
+                });
+            }
+            
+            startPerformanceMonitoring() {
+                setInterval(() => {
+                    const now = performance.now();
+                    const deltaTime = now - this.lastTime;
+                    this.fps = Math.round(1000 / deltaTime);
+                    this.lastTime = now;
+                    
+                    document.getElementById('fps').textContent = this.fps;
+                }, 1000);
+            }
+            
+            step() {
+                const dt = 1e-15;
+                
+                // Evolve physics
+                this.evolveQuantum(dt);
+                this.evolveAtomic(dt);
+                this.evolveMolecular(dt);
+                this.evolveOrbital(dt);
+                this.evolveCosmic(dt);
+                this.evolveEnergy(dt);
+                
+                // Cross-scale coupling
+                this.crossScaleCoupling();
+                
+                // Update particles
+                this.updateParticles(dt);
+                
+                this.timeStep++;
+                this.simTime += dt * 1e15;
+                
+                this.updateMetrics();
+                this.render();
+                
+                // AI analysis
+                if (this.aiEnabled && this.timeStep % 100 === 0) {
+                    this.runAI();
+                }
+            }
+            
+            evolveQuantum(dt) {
+                const newPsi = this.quantum.psi.map(row => row.map(cell => ({...cell})));
+                
+                for (let i = 1; i < this.gridSize - 1; i++) {
+                    for (let j = 1; j < this.gridSize - 1; j++) {
+                        const lapR = this.quantum.psi[i-1][j].real + this.quantum.psi[i+1][j].real +
+                                    this.quantum.psi[i][j-1].real + this.quantum.psi[i][j+1].real - 
+                                    4 * this.quantum.psi[i][j].real;
+                        
+                        const lapI = this.quantum.psi[i-1][j].imag + this.quantum.psi[i+1][j].imag +
+                                    this.quantum.psi[i][j-1].imag + this.quantum.psi[i][j+1].imag - 
+                                    4 * this.quantum.psi[i][j].imag;
+                        
+                        const V = this.quantum.potential[i][j];
+                        const coeff = -0.001 * dt;
+                        
+                        newPsi[i][j].real += coeff * lapI - V * dt * this.quantum.psi[i][j].imag;
+                        newPsi[i][j].imag -= coeff * lapR + V * dt * this.quantum.psi[i][j].real;
+                    }
+                }
+                
+                this.quantum.psi = newPsi;
+                this.normalizeQuantum();
+            }
+            
+            normalizeQuantum() {
+                let norm = 0;
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        norm += this.quantum.psi[i][j].real ** 2 + this.quantum.psi[i][j].imag ** 2;
+                    }
+                }
+                norm = Math.sqrt(norm);
+                
+                if (norm > 1e-10) {
+                    for (let i = 0; i < this.gridSize; i++) {
+                        for (let j = 0; j < this.gridSize; j++) {
+                            this.quantum.psi[i][j].real /= norm;
+                            this.quantum.psi[i][j].imag /= norm;
+                        }
+                    }
+                }
+            }
+            
+            evolveAtomic(dt) {
+                for (let i = 1; i < this.gridSize - 1; i++) {
+                    for (let j = 1; j < this.gridSize - 1; j++) {
+                        const lap = this.atomic[i-1][j] + this.atomic[i+1][j] +
+                                   this.atomic[i][j-1] + this.atomic[i][j+1] - 4 * this.atomic[i][j];
+                        
+                        this.atomic[i][j] += 0.01 * dt * lap;
+                        this.atomic[i][j] *= 0.999;
+                        this.atomic[i][j] = Math.max(0, this.atomic[i][j]);
+                    }
+                }
+            }
+            
+            evolveMolecular(dt) {
+                for (let i = 1; i < this.gridSize - 1; i++) {
+                    for (let j = 1; j < this.gridSize - 1; j++) {
+                        const lap = this.molecular[i-1][j] + this.molecular[i+1][j] +
+                                   this.molecular[i][j-1] + this.molecular[i][j+1] - 4 * this.molecular[i][j];
+                        
+                        this.molecular[i][j] += 0.005 * dt * lap;
+                        this.molecular[i][j] *= 0.995;
+                        this.molecular[i][j] = Math.max(0, Math.min(1, this.molecular[i][j]));
+                    }
+                }
+            }
+            
+            evolveOrbital(dt) {
+                const center = this.gridSize / 2;
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        if (this.orbital.mass[i][j] > 0.1) {
+                            const rx = i - center;
+                            const ry = j - center;
+                            const r = Math.sqrt(rx * rx + ry * ry) + 1e-12;
+                            
+                            const v = this.orbital.velocity[i][j];
+                            const vmag = Math.sqrt(v.x * v.x + v.y * v.y);
+                            
+                            const mbt = this.masterMBTFunction(r, vmag, vmag/r, this.timeStep * dt);
+                            const a = this.alpha * vmag * vmag / r * mbt * 0.001;
+                            
+                            if (r > 1) {
+                                this.orbital.velocity[i][j].x += -a * rx / r * dt;
+                                this.orbital.velocity[i][j].y += -a * ry / r * dt;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            evolveCosmic(dt) {
+                for (let i = 1; i < this.gridSize - 1; i += 2) {
+                    for (let j = 1; j < this.gridSize - 1; j += 2) {
+                        const lap = this.cosmic[i-1][j] + this.cosmic[i+1][j] +
+                                   this.cosmic[i][j-1] + this.cosmic[i][j+1] - 4 * this.cosmic[i][j];
+                        
+                        this.cosmic[i][j] += 0.0001 * dt * lap;
+                    }
+                }
+            }
+            
+            evolveEnergy(dt) {
+                // Energy from other scales
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const qE = this.quantum.psi[i][j].real ** 2 + this.quantum.psi[i][j].imag ** 2;
+                        const aE = this.atomic[i][j];
+                        const mE = this.molecular[i][j];
+                        const oE = this.orbital.mass[i][j];
+                        
+                        const total = qE * 0.1 + aE * 0.01 + mE * 0.05 + oE * 0.001;
+                        this.energy[i][j] += total * dt;
+                    }
+                }
+                
+                // Diffusion
+                for (let i = 1; i < this.gridSize - 1; i++) {
+                    for (let j = 1; j < this.gridSize - 1; j++) {
+                        const lap = this.energy[i-1][j] + this.energy[i+1][j] +
+                                   this.energy[i][j-1] + this.energy[i][j+1] - 4 * this.energy[i][j];
+                        
+                        this.energy[i][j] += dt * lap * 0.1;
+                        this.energy[i][j] *= 0.99;
+                    }
+                }
+                
+                // Random bursts
+                if (this.timeStep % 100 === 0) {
+                    const x = Math.floor(Math.random() * this.gridSize);
+                    const y = Math.floor(Math.random() * this.gridSize);
+                    this.energy[x][y] += Math.random() * 2;
+                    this.addParticle(x, y, 'energy');
+                }
+            }
+            
+            crossScaleCoupling() {
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const psiD = this.quantum.psi[i][j].real ** 2 + this.quantum.psi[i][j].imag ** 2;
+                        
+                        this.atomic[i][j] += psiD * 0.01;
+                        this.molecular[i][j] += this.atomic[i][j] * 0.001;
+                        this.orbital.mass[i][j] += this.molecular[i][j] * 1e-6;
+                        this.cosmic[i][j] += this.orbital.mass[i][j] * 1e-8;
+                    }
+                }
+            }
+            
+            masterMBTFunction(r, v, omega, t) {
+                const scale = 1e-10;
+                const C_r = 1.0 / (1 + (r / scale) ** this.beta);
+                const v_mag = Math.abs(v);
+                const R_v = this.alpha * v_mag * v_mag / (1 + v_mag);
+                const Omega_freq = Math.exp(-(omega * omega) / (2 * this.gamma * this.gamma));
+                const T_t = t > 0 ? Math.exp(-t / 0.1) : 1.0;
+                
+                return C_r * R_v * Omega_freq * T_t;
+            }
+            
+            addParticle(x, y, type, energy = 1.0) {
+                if (this.particles.length >= this.maxParticles) {
+                    this.particles.shift();
+                }
+                
+                this.particles.push({
+                    x: x + Math.random(),
+                    y: y + Math.random(),
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    type: type,
+                    energy: energy,
+                    age: 0,
+                    maxAge: 60 + Math.random() * 100,
+                    color: this.getParticleColor(type)
+                });
+            }
+            
+            getParticleColor(type) {
+                switch (type) {
+                    case 'quantum': return '#00ff88';
+                    case 'atomic': return '#ff6b35';
+                    case 'molecular': return '#4ecdc4';
+                    case 'orbital': return '#ffe66d';
+                    case 'cosmic': return '#c7ceea';
+                    case 'energy': return '#ff69b4';
+                    default: return '#ffffff';
+                }
+            }
+            
+            updateParticles(dt) {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    
+                    p.x += p.vx * dt * 10;
+                    p.y += p.vy * dt * 10;
+                    p.age++;
+                    p.energy *= 0.995;
+                    
+                    // Apply field forces
+                    const gridX = Math.floor(p.x) % this.gridSize;
+                    const gridY = Math.floor(p.y) % this.gridSize;
+                    if (gridX >= 0 && gridX < this.gridSize && gridY >= 0 && gridY < this.gridSize) {
+                        const force = this.energy[gridX][gridY] * 0.01;
+                        p.vx += force * (Math.random() - 0.5) * dt;
+                        p.vy += force * (Math.random() - 0.5) * dt;
+                    }
+                    
+                    // Boundary wrapping
+                    if (p.x < 0) p.x += this.gridSize;
+                    if (p.x >= this.gridSize) p.x -= this.gridSize;
+                    if (p.y < 0) p.y += this.gridSize;
+                    if (p.y >= this.gridSize) p.y -= this.gridSize;
+                    
+                    // Remove old particles
+                    if (p.age > p.maxAge || p.energy < 0.01) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+            }
+            
+            updateMetrics() {
+                if (this.timeStep % 10 !== 0) return;
+                
+                let quantumEnergy = 0;
+                let atomicPop = 0;
+                let molecularBonds = 0;
+                
+                for (let i = 0; i < this.gridSize; i += 2) {
+                    for (let j = 0; j < this.gridSize; j += 2) {
+                        quantumEnergy += this.quantum.psi[i][j].real ** 2 + this.quantum.psi[i][j].imag ** 2;
+                        atomicPop += this.atomic[i][j];
+                        molecularBonds += this.molecular[i][j];
+                    }
+                }
+                
+                document.getElementById('quantumMetric').textContent = (quantumEnergy * 10).toFixed(2);
+                document.getElementById('atomicMetric').textContent = Math.floor(atomicPop * 100);
+                document.getElementById('molecularMetric').textContent = (molecularBonds * 100).toFixed(2);
+                document.getElementById('simTime').textContent = this.simTime.toFixed(1) + 's';
+                document.getElementById('particleCount').textContent = this.particles.length;
+                
+                // Update energy graph
+                this.updateEnergyGraph(quantumEnergy);
+            }
+            
+            updateEnergyGraph(energy) {
+                this.energyHistory.push(energy);
+                if (this.energyHistory.length > 100) {
+                    this.energyHistory.shift();
+                }
+                
+                const ctx = this.graphCtx;
+                const canvas = this.graphCanvas;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                if (this.energyHistory.length > 1) {
+                    ctx.strokeStyle = '#00ff88';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    
+                    for (let i = 0; i < this.energyHistory.length; i++) {
+                        const x = (i / this.energyHistory.length) * canvas.width;
+                        const y = canvas.height - (this.energyHistory[i] * 1000);
+                        
+                        if (i === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+            }
+            
+            render() {
+                this.renderQuantum();
+                this.renderAtomic();
+                this.renderMolecular();
+                this.renderOrbital();
+                this.renderCosmic();
+                this.renderEnergy();
+                this.renderParticles();
+            }
+            
+            renderQuantum() {
+                const ctx = this.contexts.quantum;
+                const canvas = this.canvases.quantum;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.createImageData(canvas.width, canvas.height);
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const x = Math.floor((i / this.gridSize) * canvas.width);
+                        const y = Math.floor((j / this.gridSize) * canvas.height);
+                        
+                        if (x < canvas.width && y < canvas.height) {
+                            const intensity = Math.sqrt(this.quantum.psi[i][j].real ** 2 + this.quantum.psi[i][j].imag ** 2);
+                            const phase = Math.atan2(this.quantum.psi[i][j].imag, this.quantum.psi[i][j].real);
+                            
+                            const pixelIndex = (y * canvas.width + x) * 4;
+                            const colorIntensity = Math.min(255, intensity * 1000);
+                            
+                            // Phase-based coloring
+                            const hue = (phase + Math.PI) / (2 * Math.PI);
+                            if (hue < 0.33) {
+                                imageData.data[pixelIndex] = colorIntensity;
+                                imageData.data[pixelIndex + 1] = 0;
+                                imageData.data[pixelIndex + 2] = 0;
+                            } else if (hue < 0.67) {
+                                imageData.data[pixelIndex] = 0;
+                                imageData.data[pixelIndex + 1] = colorIntensity;
+                                imageData.data[pixelIndex + 2] = 0;
+                            } else {
+                                imageData.data[pixelIndex] = 0;
+                                imageData.data[pixelIndex + 1] = 0;
+                                imageData.data[pixelIndex + 2] = colorIntensity;
+                            }
+                            imageData.data[pixelIndex + 3] = 255;
+                        }
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+            
+            renderAtomic() {
+                const ctx = this.contexts.atomic;
+                const canvas = this.canvases.atomic;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.createImageData(canvas.width, canvas.height);
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const x = Math.floor((i / this.gridSize) * canvas.width);
+                        const y = Math.floor((j / this.gridSize) * canvas.height);
+                        
+                        if (x < canvas.width && y < canvas.height) {
+                            const density = this.atomic[i][j];
+                            const pixelIndex = (y * canvas.width + x) * 4;
+                            const intensity = Math.min(255, density * 200);
+                            
+                            imageData.data[pixelIndex] = intensity;
+                            imageData.data[pixelIndex + 1] = intensity * 0.5;
+                            imageData.data[pixelIndex + 2] = 35;
+                            imageData.data[pixelIndex + 3] = 255;
+                        }
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+            
+            renderMolecular() {
+                const ctx = this.contexts.molecular;
+                const canvas = this.canvases.molecular;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.createImageData(canvas.width, canvas.height);
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const x = Math.floor((i / this.gridSize) * canvas.width);
+                        const y = Math.floor((j / this.gridSize) * canvas.height);
+                        
+                        if (x < canvas.width && y < canvas.height) {
+                            const bonds = this.molecular[i][j];
+                            const pixelIndex = (y * canvas.width + x) * 4;
+                            const intensity = Math.min(255, bonds * 255);
+                            
+                            imageData.data[pixelIndex] = 76;
+                            imageData.data[pixelIndex + 1] = intensity;
+                            imageData.data[pixelIndex + 2] = 196;
+                            imageData.data[pixelIndex + 3] = 255;
+                        }
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+            
+            renderOrbital() {
+                const ctx = this.contexts.orbital;
+                const canvas = this.canvases.orbital;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.createImageData(canvas.width, canvas.height);
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const x = Math.floor((i / this.gridSize) * canvas.width);
+                        const y = Math.floor((j / this.gridSize) * canvas.height);
+                        
+                        if (x < canvas.width && y < canvas.height) {
+                            const mass = this.orbital.mass[i][j];
+                            const velocity = Math.sqrt(this.orbital.velocity[i][j].x ** 2 + this.orbital.velocity[i][j].y ** 2);
+                            
+                            const pixelIndex = (y * canvas.width + x) * 4;
+                            const massIntensity = Math.min(255, Math.log10(mass + 1) * 100);
+                            const velIntensity = Math.min(255, velocity * 500);
+                            
+                            imageData.data[pixelIndex] = massIntensity;
+                            imageData.data[pixelIndex + 1] = massIntensity;
+                            imageData.data[pixelIndex + 2] = velIntensity;
+                            imageData.data[pixelIndex + 3] = 255;
+                        }
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+            
+            renderCosmic() {
+                const ctx = this.contexts.cosmic;
+                const canvas = this.canvases.cosmic;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.createImageData(canvas.width, canvas.height);
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const x = Math.floor((i / this.gridSize) * canvas.width);
+                        const y = Math.floor((j / this.gridSize) * canvas.height);
+                        
+                        if (x < canvas.width && y < canvas.height) {
+                            const density = this.cosmic[i][j];
+                            const pixelIndex = (y * canvas.width + x) * 4;
+                            const intensity = Math.max(0, Math.min(255, (density - 0.9) * 1000));
+                            
+                            imageData.data[pixelIndex] = intensity * 0.5;
+                            imageData.data[pixelIndex + 1] = intensity * 0.5;
+                            imageData.data[pixelIndex + 2] = intensity;
+                            imageData.data[pixelIndex + 3] = 255;
+                        }
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+            
+            renderEnergy() {
+                const ctx = this.contexts.energy;
+                const canvas = this.canvases.energy;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.createImageData(canvas.width, canvas.height);
+                
+                let maxEnergy = 0.01;
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        maxEnergy = Math.max(maxEnergy, Math.abs(this.energy[i][j]));
+                    }
+                }
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const x = Math.floor((i / this.gridSize) * canvas.width);
+                        const y = Math.floor((j / this.gridSize) * canvas.height);
+                        
+                        if (x < canvas.width && y < canvas.height) {
+                            const energy = Math.abs(this.energy[i][j]);
+                            const intensity = (energy / maxEnergy) * 255;
+                            
+                            const pixelIndex = (y * canvas.width + x) * 4;
+                            imageData.data[pixelIndex] = Math.min(255, intensity);
+                            imageData.data[pixelIndex + 1] = Math.min(255, intensity * 0.4);
+                            imageData.data[pixelIndex + 2] = Math.min(255, intensity * 0.8);
+                            imageData.data[pixelIndex + 3] = 255;
+                        }
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+            
+            renderParticles() {
+                Object.keys(this.contexts).forEach(scaleKey => {
+                    const ctx = this.contexts[scaleKey];
+                    const canvas = this.canvases[scaleKey];
+                    
+                    this.particles.forEach(particle => {
+                        if (particle.energy > 0.01) {
+                            const x = (particle.x / this.gridSize) * canvas.width;
+                            const y = (particle.y / this.gridSize) * canvas.height;
+                            
+                            if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
+                                ctx.fillStyle = particle.color;
+                                ctx.globalAlpha = Math.min(1, particle.energy);
+                                ctx.beginPath();
+                                ctx.arc(x, y, Math.max(1, particle.energy * 3), 0, 2 * Math.PI);
+                                ctx.fill();
+                                ctx.globalAlpha = 1;
+                            }
+                        }
+                    });
+                });
+            }
+            
+            handleCanvasClick(canvasId, event) {
+                const rect = event.target.getBoundingClientRect();
+                const x = Math.floor((event.clientX - rect.left) / rect.width * this.gridSize);
+                const y = Math.floor((event.clientY - rect.top) / rect.height * this.gridSize);
+                
+                if (x < 0 || x >= this.gridSize || y < 0 || y >= this.gridSize) return;
+                
+                const intensity = event.shiftKey ? 3.0 : 1.0;
+                const isRightClick = event.button === 2;
+                
+                this.applyTool(canvasId, x, y, intensity, isRightClick);
+            }
+            
+            applyTool(canvasId, x, y, intensity, isRightClick) {
+                switch (this.currentTool) {
+                    case 'quantum':
+                        if (canvasId === 'quantum') {
+                            if (isRightClick) {
+                                this.quantum.psi[x][y].real *= 0.5;
+                                this.quantum.psi[x][y].imag *= 0.5;
+                            } else {
+                                this.quantum.psi[x][y].real += intensity * 0.3;
+                                this.quantum.psi[x][y].imag += intensity * 0.2;
+                                this.addParticle(x, y, 'quantum', intensity);
+                            }
+                        }
+                        break;
+                        
+                    case 'atom':
+                        if (canvasId === 'atomic') {
+                            if (isRightClick) {
+                                this.atomic[x][y] *= 0.7;
+                            } else {
+                                this.atomic[x][y] += intensity;
+                                this.quantum.potential[x][y] = -5.0;
+                                this.addParticle(x, y, 'atomic', intensity);
+                            }
+                        }
+                        break;
+                        
+                    case 'molecule':
+                        if (canvasId === 'molecular') {
+                            if (isRightClick) {
+                                this.molecular[x][y] *= 0.3;
+                            } else {
+                                this.molecular[x][y] += intensity * 0.5;
+                                this.addParticle(x, y, 'molecular', intensity);
+                            }
+                        }
+                        break;
+                        
+                    case 'planet':
+                        if (canvasId === 'orbital') {
+                            if (isRightClick) {
+                                this.orbital.mass[x][y] *= 0.5;
+                            } else {
+                                this.orbital.mass[x][y] += intensity * 2;
+                                
+                                const center = this.gridSize / 2;
+                                const r = Math.sqrt((x - center) ** 2 + (y - center) ** 2);
+                                if (r > 2) {
+                                    const angle = Math.atan2(y - center, x - center);
+                                    const v = Math.sqrt(10 / r) * 0.2;
+                                    this.orbital.velocity[x][y].x = -v * Math.sin(angle);
+                                    this.orbital.velocity[x][y].y = v * Math.cos(angle);
+                                }
+                                this.addParticle(x, y, 'orbital', intensity);
+                            }
+                        }
+                        break;
+                        
+                    case 'energy':
+                        if (isRightClick) {
+                            this.energy[x][y] *= 0.3;
+                        } else {
+                            this.energy[x][y] += intensity;
+                            this.addParticle(x, y, 'energy', intensity);
+                        }
+                        break;
+                        
+                    case 'blackhole':
+                        this.orbital.mass[x][y] += intensity * 10;
+                        this.quantum.potential[x][y] = -intensity * 20;
+                        
+                        // Absorb nearby matter
+                        for (let i = -2; i <= 2; i++) {
+                            for (let j = -2; j <= 2; j++) {
+                                const nx = x + i, ny = y + j;
+                                if (nx >= 0 && nx < this.gridSize && ny >= 0 && ny < this.gridSize) {
+                                    this.atomic[nx][ny] *= 0.8;
+                                    this.energy[nx][ny] += this.atomic[nx][ny] * 0.2;
+                                }
+                            }
+                        }
+                        this.addParticle(x, y, 'cosmic', intensity * 2);
+                        break;
+                }
+            }
+            
+            // PRESET SCENARIOS
+            loadPreset(presetName) {
+                this.reset();
+                setTimeout(() => {
+                    switch (presetName) {
+                        case 'hydrogen':
+                            this.createHydrogen();
+                            break;
+                        case 'water':
+                            this.createWater();
+                            break;
+                        case 'solar':
+                            this.createSolarSystem();
+                            break;
+                        case 'galaxy':
+                            this.createGalaxy();
+                            break;
+                        case 'consciousness':
+                            this.createConsciousness();
+                            break;
+                    }
+                }, 100);
+            }
+            
+            createHydrogen() {
+                const center = this.gridSize / 2;
+                this.quantum.potential[center][center] = -20;
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const r = Math.sqrt((i - center) ** 2 + (j - center) ** 2);
+                        const psi = Math.exp(-r / 3);
+                        this.quantum.psi[i][j].real = psi;
+                        this.quantum.psi[i][j].imag = 0;
+                        this.atomic[i][j] = psi * psi;
+                    }
+                }
+                this.normalizeQuantum();
+                this.addAIDiscovery("⚛️ Hydrogen atom created with quantum orbital!");
+            }
+            
+            createWater() {
+                const center = this.gridSize / 2;
+                
+                // Oxygen
+                this.atomic[center][center] = 8;
+                
+                // Hydrogens
+                this.atomic[center - 4][center + 2] = 1;
+                this.atomic[center + 4][center + 2] = 1;
+                
+                // Bonds
+                for (let t = 0; t <= 1; t += 0.2) {
+                    const x1 = Math.floor(center + t * -4);
+                    const y1 = Math.floor(center + t * 2);
+                    const x2 = Math.floor(center + t * 4);
+                    const y2 = Math.floor(center + t * 2);
+                    
+                    if (x1 >= 0 && x1 < this.gridSize && y1 >= 0 && y1 < this.gridSize) {
+                        this.molecular[x1][y1] = 0.8;
+                    }
+                    if (x2 >= 0 && x2 < this.gridSize && y2 >= 0 && y2 < this.gridSize) {
+                        this.molecular[x2][y2] = 0.8;
+                    }
+                }
+                this.addAIDiscovery("💧 H₂O molecule assembled!");
+            }
+            
+            createSolarSystem() {
+                const center = this.gridSize / 2;
+                
+                // Sun
+                this.orbital.mass[center][center] = 50;
+                this.energy[center][center] = 20;
+                
+                // Planets
+                const planets = [
+                    { r: 6, m: 0.5 },
+                    { r: 10, m: 0.8 },
+                    { r: 14, m: 1.0 },
+                    { r: 18, m: 0.3 }
+                ];
+                
+                planets.forEach((planet, i) => {
+                    const angle = (i * 2 * Math.PI) / planets.length;
+                    const x = Math.floor(center + planet.r * Math.cos(angle));
+                    const y = Math.floor(center + planet.r * Math.sin(angle));
+                    
+                    if (x >= 0 && x < this.gridSize && y >= 0 && y < this.gridSize) {
+                        this.orbital.mass[x][y] = planet.m;
+                        const v = Math.sqrt(50 / planet.r) * 0.1;
+                        this.orbital.velocity[x][y].x = -v * Math.sin(angle);
+                        this.orbital.velocity[x][y].y = v * Math.cos(angle);
+                    }
+                });
+                this.addAIDiscovery("☀️ Solar system created with orbital mechanics!");
+            }
+            
+            createGalaxy() {
+                const center = this.gridSize / 2;
+                
+                // Central black hole
+                this.orbital.mass[center][center] = 100;
+                this.quantum.potential[center][center] = -100;
+                
+                // Spiral arms
+                for (let r = 3; r < this.gridSize / 2; r += 2) {
+                    for (let arm = 0; arm < 2; arm++) {
+                        const baseAngle = arm * Math.PI;
+                        const spiralAngle = baseAngle + r * 0.3;
+                        const x = Math.floor(center + r * Math.cos(spiralAngle));
+                        const y = Math.floor(center + r * Math.sin(spiralAngle));
+                        
+                        if (x >= 0 && x < this.gridSize && y >= 0 && y < this.gridSize) {
+                            this.orbital.mass[x][y] = 2 + Math.random() * 3;
+                            this.cosmic[x][y] = 1.3;
+                            this.energy[x][y] = Math.random() * 5;
+                            
+                            const v = Math.sqrt(100 / r) * 0.2;
+                            this.orbital.velocity[x][y].x = -v * Math.sin(spiralAngle);
+                            this.orbital.velocity[x][y].y = v * Math.cos(spiralAngle);
+                        }
+                    }
+                }
+                this.addAIDiscovery("🌌 Spiral galaxy formed with central black hole!");
+            }
+            
+            createConsciousness() {
+                const centers = [];
+                for (let i = 0; i < 6; i++) {
+                    centers.push([
+                        Math.floor(Math.random() * this.gridSize),
+                        Math.floor(Math.random() * this.gridSize)
+                    ]);
+                }
+                
+                // Neural nodes
+                centers.forEach(([x, y]) => {
+                    this.molecular[x][y] = 1.0;
+                    this.atomic[x][y] = 3;
+                    this.energy[x][y] = 5;
+                    
+                    // Connections
+                    for (let d = 0; d < 4; d++) {
+                        const angle = (d * 2 * Math.PI) / 4;
+                        const length = 3 + Math.random() * 3;
+                        
+                        for (let step = 1; step <= length; step++) {
+                            const nx = Math.floor(x + step * Math.cos(angle));
+                            const ny = Math.floor(y + step * Math.sin(angle));
+                            
+                            if (nx >= 0 && nx < this.gridSize && ny >= 0 && ny < this.gridSize) {
+                                this.molecular[nx][ny] = 0.3 * (1 - step / length);
+                                this.atomic[nx][ny] = 0.5;
+                            }
+                        }
+                    }
+                });
+                
+                // Information patterns
+                for (let pattern = 0; pattern < 15; pattern++) {
+                    const px = Math.floor(Math.random() * this.gridSize);
+                    const py = Math.floor(Math.random() * this.gridSize);
+                    
+                    this.quantum.psi[px][py].real = 0.5 * Math.sin(pattern * 0.3);
+                    this.quantum.psi[px][py].imag = 0.5 * Math.cos(pattern * 0.3);
+                }
+                
+                this.addAIDiscovery("🧠 Neural network created with quantum coherence!");
+            }
+            
+            runAI() {
+                // Simple pattern detection
+                let totalEnergy = 0;
+                let clusters = 0;
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        totalEnergy += this.energy[i][j];
+                        
+                        if (this.atomic[i][j] > 1 && this.molecular[i][j] > 0.5) {
+                            clusters++;
+                        }
+                    }
+                }
+                
+                if (totalEnergy > 50 && Math.random() < 0.1) {
+                    this.addAIDiscovery(`⚡ High energy state detected! Total: ${totalEnergy.toFixed(1)}`);
+                }
+                
+                if (clusters > 10 && Math.random() < 0.1) {
+                    this.addAIDiscovery(`🎯 ${clusters} molecular clusters formed through self-organization!`);
+                }
+                
+                // Detect spiral patterns
+                let spiralScore = 0;
+                const center = this.gridSize / 2;
+                
+                for (let r = 5; r < center; r += 3) {
+                    let angleSum = 0;
+                    let count = 0;
+                    
+                    for (let theta = 0; theta < 2 * Math.PI; theta += 0.5) {
+                        const x = Math.floor(center + r * Math.cos(theta));
+                        const y = Math.floor(center + r * Math.sin(theta));
+                        
+                        if (x >= 0 && x < this.gridSize && y >= 0 && y < this.gridSize) {
+                            const density = this.cosmic[x][y] + this.orbital.mass[x][y];
+                            if (density > 1.2) {
+                                angleSum += theta;
+                                count++;
+                            }
+                        }
+                    }
+                    
+                    if (count > 2) {
+                        spiralScore += Math.sin(angleSum / count) ** 2;
+                    }
+                }
+                
+                if (spiralScore > 1 && Math.random() < 0.05) {
+                    this.addAIDiscovery(`🌀 Spiral structure emerging! Complexity: ${spiralScore.toFixed(2)}`);
+                }
+            }
+            
+            addAIDiscovery(message) {
+                const discoveryDiv = document.createElement('div');
+                discoveryDiv.className = 'ai-discovery';
+                discoveryDiv.textContent = message;
+                
+                const container = document.getElementById('aiDiscoveries');
+                container.insertBefore(discoveryDiv, container.firstChild);
+                
+                // Keep only latest 5 discoveries
+                const discoveries = container.children;
+                if (discoveries.length > 5) {
+                    container.removeChild(discoveries[discoveries.length - 1]);
+                }
+            }
+            
+            start() {
+                this.isRunning = true;
+                document.getElementById('playBtn').textContent = '⏸️ PAUSE';
+                document.getElementById('playBtn').classList.add('active');
+                this.startAnimation();
+            }
+            
+            stop() {
+                this.isRunning = false;
+                document.getElementById('playBtn').textContent = '▶️ START';
+                document.getElementById('playBtn').classList.remove('active');
+                if (this.animationId) {
+                    clearInterval(this.animationId);
+                }
+            }
+            
+            reset() {
+                this.stop();
+                this.timeStep = 0;
+                this.simTime = 0;
+                this.particles = [];
+                this.energyHistory = [];
+                this.initializeFields();
+                this.addAIDiscovery("🔄 System reset - ready for new experiments!");
+            }
+            
+            startAnimation() {
+                this.animationId = setInterval(() => {
+                    if (this.isRunning) {
+                        this.step();
+                    }
+                }, this.speedMs);
+            }
+        }
+        
+        // GLOBAL FUNCTIONS
+        let engine;
+        
+        function toggleSimulation() {
+            if (engine.isRunning) {
+                engine.stop();
+            } else {
+                engine.start();
+            }
+        }
+        
+        function resetAll() {
+            engine.reset();
+        }
+        
+        function loadPreset(presetName) {
+            engine.loadPreset(presetName);
+        }
+        
+        function toggleAI() {
+            engine.aiEnabled = !engine.aiEnabled;
+            const status = engine.aiEnabled ? "enabled" : "disabled";
+            engine.addAIDiscovery(`🤖 AI pattern recognition ${status}!`);
+        }
+        
+        // INITIALIZE ENGINE
+        window.addEventListener('load', () => {
+            console.log('🌌 Starting Ultimate MBT Engine...');
+            engine = new MBTEngine();
+            
+            // Add some initial instructions
+            engine.addAIDiscovery("🌌 Welcome to the Ultimate MBT Physics Engine!");
+            engine.addAIDiscovery("🎮 Click on canvases to interact, try presets!");
+            engine.addAIDiscovery("⚡ Enable AI to discover emergent patterns!");
+            
+            console.log('✅ Engine fully operational!');
+        });
+        
+        // KEYBOARD SHORTCUTS
+        document.addEventListener('keydown', (e) => {
+            if (!engine) return;
+            
+            switch (e.key.toLowerCase()) {
+                case ' ':
+                    e.preventDefault();
+                    toggleSimulation();
+                    break;
+                case 'r':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        resetAll();
+                    }
+                    break;
+                case '1': case '2': case '3': case '4': case '5': case '6':
+                    const tools = ['quantum', 'atom', 'molecule', 'planet', 'energy', 'blackhole'];
+                    const toolIndex = parseInt(e.key) - 1;
+                    if (toolIndex < tools.length) {
+                        engine.currentTool = tools[toolIndex];
+                        document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+                        document.querySelector(`[data-tool="${tools[toolIndex]}"]`).classList.add('active');
+                    }
+                    break;
+                case 'a':
+                    toggleAI();
+                    break;
+            }
+        });
+        
+        console.log('🎮 Ultimate MBT Physics Engine loaded!');
+        console.log('📋 Controls: SPACE=play/pause, R=reset, 1-6=tools, A=AI toggle');
+        console.log('🖱️ Click canvases to add objects, Shift+click for more intensity!');
+    </script>
+</body>
+</html>
