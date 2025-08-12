@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MBT Ultimate Physics Engine</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            overflow-x: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            background: linear-gradient(45deg, #00ff88, #0099ff, #ff0099);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { filter: drop-shadow(0 0 10px rgba(0, 255, 136, 0.5)); }
+            to { filter: drop-shadow(0 0 20px rgba(0, 153, 255, 0.8)); }
+        }
+
+        .simulation-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .scale-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .scale-title {
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .quantum { color: #00ff88; }
+        .atomic { color: #ff6b35; }
+        .molecular { color: #4ecdc4; }
+        .orbital { color: #ffe66d; }
+        .cosmic { color: #c7ceea; }
+
+        canvas {
+            width: 100%;
+            height: 200px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+        }
+
+        .control-group label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .control-group input, .control-group select {
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .control-group input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, #00ff88, #0099ff);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .metric {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .logs {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 0.9em;
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .mbt-equation {
+            text-align: center;
+            font-size: 1.2em;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border: 2px solid rgba(0, 255, 136, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌌 MBT ULTIMATE PHYSICS ENGINE 🌌</h1>
+        <p>Multi-Scale Universe Simulation: From Quantum to Cosmic</p>
+    </div>
+
+    <div class="mbt-equation">
+        <strong>Master MBT Function:</strong><br>
+        Ψ(r,v,ω,t) = C(r) × R(v) × Ω(ω) × T(t) × F(field_interactions)
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>α (Resistance Coupling)</label>
+            <input type="range" id="alpha" min="0.1" max="3.0" step="0.1" value="1.0">
+            <span id="alpha-value">1.0</span>
+        </div>
+        <div class="control-group">
+            <label>β (Curvature Decay)</label>
+            <input type="range" id="beta" min="0.1" max="2.0" step="0.1" value="0.5">
+            <span id="beta-value">0.5</span>
+        </div>
+        <div class="control-group">
+            <label>γ (Frequency Resonance)</label>
+            <input type="range" id="gamma" min="0.5" max="5.0" step="0.1" value="2.0">
+            <span id="gamma-value">2.0</span>
+        </div>
+        <div class="control-group">
+            <label>δ (Temporal Memory)</label>
+            <input type="range" id="delta" min="0.01" max="1.0" step="0.01" value="0.1">
+            <span id="delta-value">0.1</span>
+        </div>
+        <div class="control-group">
+            <label>Simulation Speed</label>
+            <input type="range" id="speed" min="1" max="100" step="1" value="50">
+            <span id="speed-value">50ms</span>
+        </div>
+        <div class="control-group">
+            <button class="button" id="playPause">▶️ Start Simulation</button>
+        </div>
+        <div class="control-group">
+            <button class="button" id="reset">🔄 Reset Universe</button>
+        </div>
+    </div>
+
+    <div class="simulation-container">
+        <div class="scale-panel">
+            <div class="scale-title quantum">🔬 QUANTUM SCALE</div>
+            <canvas id="quantumCanvas" width="300" height="200"></canvas>
+            <div style="margin-top: 10px; font-size: 0.9em;">
+                Wave Function |ψ|² & Quantum Vortices
+            </div>
+        </div>
+
+        <div class="scale-panel">
+            <div class="scale-title atomic">⚛️ ATOMIC SCALE</div>
+            <canvas id="atomicCanvas" width="300" height="200"></canvas>
+            <div style="margin-top: 10px; font-size: 0.9em;">
+                Electron Shell Density & Spin Fields
+            </div>
+        </div>
+
+        <div class="scale-panel">
+            <div class="scale-title molecular">🧬 MOLECULAR SCALE</div>
+            <canvas id="molecularCanvas" width="300" height="200"></canvas>
+            <div style="margin-top: 10px; font-size: 0.9em;">
+                Bond Networks & Vibrational Modes
+            </div>
+        </div>
+
+        <div class="scale-panel">
+            <div class="scale-title orbital">🪐 ORBITAL SCALE</div>
+            <canvas id="orbitalCanvas" width="300" height="200"></canvas>
+            <div style="margin-top: 10px; font-size: 0.9em;">
+                Gravitational Fields & Planetary Dynamics
+            </div>
+        </div>
+
+        <div class="scale-panel">
+            <div class="scale-title cosmic">🌌 COSMIC SCALE</div>
+            <canvas id="cosmicCanvas" width="300" height="200"></canvas>
+            <div style="margin-top: 10px; font-size: 0.9em;">
+                Large Scale Structure & Cosmic Web
+            </div>
+        </div>
+
+        <div class="scale-panel">
+            <div class="scale-title" style="color: #ff69b4;">⚡ ENERGY SYSTEMS</div>
+            <canvas id="energyCanvas" width="300" height="200"></canvas>
+            <div style="margin-top: 10px; font-size: 0.9em;">
+                Cross-Scale Energy Flow & Field Interactions
+            </div>
+        </div>
+    </div>
+
+    <div class="metrics">
+        <div class="metric quantum">
+            <div class="metric-value" id="quantumEnergy">0.00</div>
+            <div class="metric-label">Quantum Coherence</div>
+        </div>
+        <div class="metric atomic">
+            <div class="metric-value" id="atomicPopulation">0</div>
+            <div class="metric-label">Atomic Population</div>
+        </div>
+        <div class="metric molecular">
+            <div class="metric-value" id="molecularBonds">0.00</div>
+            <div class="metric-label">Molecular Bonds</div>
+        </div>
+        <div class="metric orbital">
+            <div class="metric-value" id="orbitalMass">0.00</div>
+            <div class="metric-label">Total Mass</div>
+        </div>
+        <div class="metric cosmic">
+            <div class="metric-value" id="cosmicStructure">0.000000</div>
+            <div class="metric-label">Structure Variance</div>
+        </div>
+        <div class="metric" style="color: #ff69b4;">
+            <div class="metric-value" id="emergentPhenomena">0</div>
+            <div class="metric-label">Emergent Phenomena</div>
+        </div>
+    </div>
+
+    <div class="scale-panel">
+        <div class="scale-title" style="color: #ffd700;">📊 SIMULATION LOGS</div>
+        <div class="logs" id="logs"></div>
+    </div>
+
+    <script>
+        class MBTPhysicsEngine {
+            constructor() {
+                this.gridSize = 64;
+                this.timeStep = 0;
+                this.isRunning = false;
+                
+                // MBT Parameters
+                this.alpha = 1.0;    // Resistance coupling strength
+                this.beta = 0.5;     // Curvature decay rate
+                this.gamma = 2.0;    // Frequency resonance width
+                this.delta = 0.1;    // Temporal memory decay
+                
+                // Physical constants
+                this.c = 299792458;
+                this.hbar = 1.054e-34;
+                
+                // Initialize canvases
+                this.canvases = {
+                    quantum: document.getElementById('quantumCanvas'),
+                    atomic: document.getElementById('atomicCanvas'),
+                    molecular: document.getElementById('molecularCanvas'),
+                    orbital: document.getElementById('orbitalCanvas'),
+                    cosmic: document.getElementById('cosmicCanvas'),
+                    energy: document.getElementById('energyCanvas')
+                };
+                
+                this.contexts = {};
+                Object.keys(this.canvases).forEach(key => {
+                    this.contexts[key] = this.canvases[key].getContext('2d');
+                });
+                
+                this.initializeFields();
+                this.setupControls();
+                this.log("MBT Physics Engine initialized successfully");
+            }
+            
+            initializeFields() {
+                // Initialize field data structures
+                this.quantum = {
+                    psi: new Array(this.gridSize).fill(null).map(() => 
+                        new Array(this.gridSize).fill(null).map(() => ({
+                            real: (Math.random() - 0.5) * 0.1,
+                            imag: (Math.random() - 0.5) * 0.1
+                        }))
+                    ),
+                    potential: new Array(this.gridSize).fill(null).map(() => new Array(this.gridSize).fill(0)),
+                    vortices: new Array(this.gridSize).fill(null).map(() => new Array(this.gridSize).fill(0))
+                };
+                
+                this.atomic = {
+                    electronDensity: new Array(7).fill(null).map(() =>
+                        new Array(this.gridSize).fill(null).map(() => new Array(this.gridSize).fill(0))
+                    ),
+                    spinField: new Array(this.gridSize).fill(null).map(() => 
+                        new Array(this.gridSize).fill(null).map(() => ({x: 0, y: 0, z: 0}))
+                    )
+                };
+                
+                this.molecular = {
+                    bondField: new Array(this.gridSize).fill(null).map(() => new Array(this.gridSize).fill(0)),
+                    vibrationalModes: new Array(12).fill(null).map(() =>
+                        new Array(this.gridSize).fill(null).map(() => new Array(this.gridSize).fill(0))
+                    )
+                };
+                
+                this.orbital = {
+                    massField: new Array(this.gridSize).fill(null).map(() => new Array(this.gridSize).fill(0)),
+                    velocityField: new Array(this.gridSize).fill(null).map(() => 
+                        new Array(this.gridSize).fill(null).map(() => ({x: 0, y: 0, z: 0}))
+                    ),
+                    curvatureField: new Array(this.gridSize).fill(null).map(() => new Array(this.gridSize).fill(0))
+                };
+                
+                this.cosmic = {
+                    densityField: new Array(this.gridSize).fill(null).map(() => 
+                        new Array(this.gridSize).fill(Math.random() * 0.1 + 1.0)
+                    ),
+                    structureField: new Array(this.gridSize).fill(null).map(() => new Array(this.gridSize).fill(0))
+                };
+                
+                this.energy = {
+                    plasmaField: new Array(this.gridSize).fill(null).map(() => new Array(this.gridSize).fill(0)),
+                    magneticField: new Array(this.gridSize).fill(null).map(() => 
+                        new Array(this.gridSize).fill(null).map(() => ({x: 0, y: 0, z: 0}))
+                    )
+                };
+                
+                this.seedInitialConditions();
+            }
+            
+            seedInitialConditions() {
+                const center = this.gridSize / 2;
+                
+                // Quantum: Gaussian wave packet
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const r2 = (i - center) ** 2 + (j - center) ** 2;
+                        const amplitude = Math.exp(-r2 / (2 * (this.gridSize / 8) ** 2));
+                        this.quantum.psi[i][j].real = amplitude * Math.cos(0.1 * i);
+                        this.quantum.psi[i][j].imag = amplitude * Math.sin(0.1 * i);
+                    }
+                }
+                
+                // Add quantum potential wells
+                for (let n = 0; n < 3; n++) {
+                    const px = Math.floor(Math.random() * (this.gridSize - 20)) + 10;
+                    const py = Math.floor(Math.random() * (this.gridSize - 20)) + 10;
+                    for (let i = Math.max(0, px - 3); i < Math.min(this.gridSize, px + 3); i++) {
+                        for (let j = Math.max(0, py - 3); j < Math.min(this.gridSize, py + 3); j++) {
+                            this.quantum.potential[i][j] = -10.0;
+                        }
+                    }
+                }
+                
+                // Atomic: Electron shells
+                for (let shell = 0; shell < 4; shell++) {
+                    const radius = (shell + 1) * this.gridSize / 16;
+                    for (let theta = 0; theta < 2 * Math.PI; theta += 0.1) {
+                        const x = Math.floor(center + radius * Math.cos(theta));
+                        const y = Math.floor(center + radius * Math.sin(theta));
+                        if (x >= 0 && x < this.gridSize && y >= 0 && y < this.gridSize) {
+                            this.atomic.electronDensity[shell][x][y] = Math.exp(-shell * 0.3);
+                        }
+                    }
+                }
+                
+                // Molecular: Random molecular clusters
+                for (let n = 0; n < 15; n++) {
+                    const cx = Math.floor(Math.random() * (this.gridSize - 16)) + 8;
+                    const cy = Math.floor(Math.random() * (this.gridSize - 16)) + 8;
+                    const size = 3 + Math.floor(Math.random() * 4);
+                    
+                    for (let i = Math.max(0, cx - size); i < Math.min(this.gridSize, cx + size); i++) {
+                        for (let j = Math.max(0, cy - size); j < Math.min(this.gridSize, cy + size); j++) {
+                            this.molecular.bondField[i][j] = Math.random() * 0.8 + 0.2;
+                        }
+                    }
+                }
+                
+                // Orbital: Central star and planets
+                this.orbital.massField[Math.floor(center)][Math.floor(center)] = 100.0;
+                
+                const planetRadii = [12, 20, 30, 45];
+                planetRadii.forEach((radius, index) => {
+                    if (radius < this.gridSize / 2) {
+                        const theta = Math.random() * 2 * Math.PI;
+                        const px = Math.floor(center + radius * Math.cos(theta));
+                        const py = Math.floor(center + radius * Math.sin(theta));
+                        if (px >= 0 && px < this.gridSize && py >= 0 && py < this.gridSize) {
+                            this.orbital.massField[px][py] = 1.0 + index * 0.5;
+                        }
+                    }
+                });
+                
+                this.log("Initial conditions seeded successfully");
+            }
+            
+            masterMBTFunction(r, v, omega, t, fieldType = 'default') {
+                const quantumScale = this.hbar / (this.alpha * this.c);
+                
+                // Core curvature field
+                const C_r = 1.0 / Math.pow(1 + Math.pow(r / quantumScale, 2), this.beta);
+                
+                // Velocity-based resistance
+                const v_mag = typeof v === 'object' ? Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z) : Math.abs(v);
+                const R_v = this.alpha * v_mag * v_mag / (1 + v_mag / this.c);
+                
+                // Frequency response
+                const Omega_freq = Math.exp(-(omega * omega) / (2 * this.gamma * this.gamma));
+                
+                // Temporal memory
+                const T_t = t > 0 ? Math.exp(-t / this.delta) : 1.0;
+                
+                // Field-specific modifications
+                let fieldMod = 1.0;
+                switch (fieldType) {
+                    case 'quantum':
+                        const uncertainty = this.hbar / (r + 1e-12);
+                        fieldMod = (1 + uncertainty) * Math.cos(omega * t);
+                        break;
+                    case 'atomic':
+                        fieldMod = 0;
+                        for (let n = 1; n <= 7; n++) {
+                            fieldMod += Math.exp(-((r - n * quantumScale) ** 2) / this.gamma);
+                        }
+                        break;
+                    case 'molecular':
+                        fieldMod = Math.exp(-r / quantumScale) - Math.exp(-2 * r / quantumScale);
+                        break;
+                    case 'orbital':
+                        const cosmicScale = this.c / (this.alpha * 6.674e-11);
+                        fieldMod = 1.0 / (1 + r * r / (cosmicScale * cosmicScale));
+                        break;
+                    case 'cosmic':
+                        fieldMod = Math.pow(1 + t * 2.3e-18, -0.5);
+                        break;
+                }
+                
+                return C_r * R_v * Omega_freq * T_t * fieldMod;
+            }
+            
+            evolveQuantum(dt) {
+                const newPsi = this.quantum.psi.map(row => row.map(cell => ({...cell})));
+                
+                for (let i = 1; i < this.gridSize - 1; i++) {
+                    for (let j = 1; j < this.gridSize - 1; j++) {
+                        // Kinetic energy (Laplacian)
+                        const laplacian_real = 
+                            this.quantum.psi[i-1][j].real + this.quantum.psi[i+1][j].real +
+                            this.quantum.psi[i][j-1].real + this.quantum.psi[i][j+1].real - 
+                            4 * this.quantum.psi[i][j].real;
+                        
+                        const laplacian_imag = 
+                            this.quantum.psi[i-1][j].imag + this.quantum.psi[i+1][j].imag +
+                            this.quantum.psi[i][j-1].imag + this.quantum.psi[i][j+1].imag - 
+                            4 * this.quantum.psi[i][j].imag;
+                        
+                        // MBT corrections
+                        const r = Math.sqrt((i - this.gridSize/2) ** 2 + (j - this.gridSize/2) ** 2);
+                        const v = Math.sqrt(this.quantum.psi[i][j].real ** 2 + this.quantum.psi[i][j].imag ** 2);
+                        const omega = Math.atan2(this.quantum.psi[i][j].imag, this.quantum.psi[i][j].real);
+                        
+                        const mbtFactor = this.masterMBTFunction(r, v, omega, this.timeStep * dt, 'quantum');
+                        
+                        // Schrödinger evolution
+                        const potential = this.quantum.potential[i][j];
+                        const kinetic_coeff = -this.hbar * this.hbar / (2 * 9.109e-31) * dt / (this.hbar * 1e10);
+                        
+                        newPsi[i][j].real += kinetic_coeff * laplacian_imag - (potential + mbtFactor * 0.1) * dt * this.quantum.psi[i][j].imag;
+                        newPsi[i][j].imag -= kinetic_coeff * laplacian_real + (potential + mbtFactor * 0.1) * dt * this.quantum.psi[i][j].real;
+                        
+                        // Generate vortices
+                        const phase_grad_x = Math.atan2(this.quantum.psi[i+1][j].imag, this.quantum.psi[i+1][j].real) - 
+                                           Math.atan2(this.quantum.psi[i-1][j].imag, this.quantum.psi[i-1][j].real);
+                        const phase_grad_y = Math.atan2(this.quantum.psi[i][j+1].imag, this.quantum.psi[i][j+1].real) - 
+                                           Math.atan2(this.quantum.psi[i][j-1].imag, this.quantum.psi[i][j-1].real);
+                        
+                        this.quantum.vortices[i][j] = (phase_grad_x + phase_grad_y) * v;
+                    }
+                }
+                
+                // Normalize
+                let norm = 0;
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        norm += newPsi[i][j].real ** 2 + newPsi[i][j].imag ** 2;
+                    }
+                }
+                norm = Math.sqrt(norm);
+                
+                if (norm > 0) {
+                    for (let i = 0; i < this.gridSize; i++) {
+                        for (let j = 0; j < this.gridSize; j++) {
+                            newPsi[i][j].real /= norm;
+                            newPsi[i][j].imag /= norm;
+                        }
+                    }
+                }
+                
+                this.quantum.psi = newPsi;
+            }
+            
+            evolveAtomic(dt) {
+                // Evolve electron shells with diffusion and MBT effects
+                for (let shell = 0; shell < this.atomic.electronDensity.length; shell++) {
+                    const diffusionRate = 0.1 / ((shell + 1) ** 2);
+                    
+                    for (let i = 1; i < this.gridSize - 1; i++) {
+                        for (let j = 1; j < this.gridSize - 1; j++) {
+                            // Diffusion
+                            const laplacian = 
+                                this.atomic.electronDensity[shell][i-1][j] + 
+                                this.atomic.electronDensity[shell][i+1][j] +
+                                this.atomic.electronDensity[shell][i][j-1] + 
+                                this.atomic.electronDensity[shell][i][j+1] - 
+                                4 * this.atomic.electronDensity[shell][i][j];
+                            
+                            this.atomic.electronDensity[shell][i][j] += diffusionRate * dt * laplacian;
+                            
+                            // MBT shell resonance
+                            const r = Math.sqrt((i - this.gridSize/2) ** 2 + (j - this.gridSize/2) ** 2);
+                            const v = this.atomic.electronDensity[shell][i][j];
+                            const omega = 2.18e-18 / ((shell + 1) ** 2);
+                            
+                            const mbtFactor = this.masterMBTFunction(r, v, omega, this.timeStep * dt, 'atomic');
+                            this.atomic.electronDensity[shell][i][j] += dt * mbtFactor * 0.01;
+                            
+                            // Natural decay
+                            this.atomic.electronDensity[shell][i][j] *= Math.exp(-dt * 0.001);
+                            this.atomic.electronDensity[shell][i][j] = Math.max(0, this.atomic.electronDensity[shell][i][j]);
+                        }
+                    }
+                }
+                
+                // Evolve spin field
+                for (let i = 1; i < this.gridSize - 1; i++) {
+                    for (let j = 1; j < this.gridSize - 1; j++) {
+                        const spinDiffusion = 0.05 * dt;
+                        ['x', 'y', 'z'].forEach(component => {
+                            const laplacian = 
+                                this.atomic.spinField[i-1][j][component] + 
+                                this.atomic.spinField[i+1][j][component] +
+                                this.atomic.spinField[i][j-1][component] + 
+                                this.atomic.spinField[i][j+1][component] - 
+                                4 * this.atomic.spinField[i][j][component];
+                            
+                            this.atomic.spinField[i][j][component] += spinDiffusion * laplacian;
+                        });
+                    }
+                }
+            }
+            
+            evolveMolecular(dt) {
+                // Bond field evolution
+                for (let i = 1; i < this.gridSize - 1; i++) {
+                    for (let j = 1; j < this.gridSize - 1; j++) {
+                        // Diffusion
+                        const laplacian = 
+                            this.molecular.bondField[i-1][j] + this.molecular.bondField[i+1][j] +
+                            this.molecular.bondField[i][j-1] + this.molecular.bondField[i][j+1] - 
+                            4 * this.molecular.bondField[i][j];
+                        
+                        this.molecular.bondField[i][j] += 0.02 * dt * laplacian;
+                        
+                        // MBT molecular potential
+                        const r = Math.sqrt(i ** 2 + j ** 2) + 1e-12;
+                        const v = this.molecular.bondField[i][j];
+                        const omega = 1e12;
+                        
+                        const mbtPotential = this.masterMBTFunction(r, v, omega, this.timeStep * dt, 'molecular');
+                        this.molecular.bondField[i][j] += dt * mbtPotential * 0.001;
+                        
+                        // Decay
+                        this.molecular.bondField[i][j] *= (1 - dt * 0.0001);
+                        this.molecular.bondField[i][j] = Math.max(0, Math.min(2.0, this.molecular.bondField[i][j]));
+                    }
+                }
+                
+                // Vibrational modes
+                for (let mode = 0; mode < this.molecular.vibrationalModes.length; mode++) {
+                    const frequency = (mode + 1) * 1e12;
+                    
+                    for (let i = 0; i < this.gridSize; i++) {
+                        for (let j = 0; j < this.gridSize; j++) {
+                            // Harmonic oscillator evolution
+                            this.molecular.vibrationalModes[mode][i][j] *= Math.cos(frequency * dt * this.timeStep);
+                            
+                            // Coupling to bond field
+                            this.molecular.vibrationalModes[mode][i][j] += 
+                                this.molecular.bondField[i][j] * 0.01 * Math.sin(frequency * dt * this.timeStep);
+                        }
+                    }
+                }
+            }
+            
+            evolveOrbital(dt) {
+                const center = this.gridSize / 2;
+                
+                // MBT velocity-dependent orbital dynamics
+                for (let i = 1; i < this.gridSize - 1; i++) {
+                    for (let j = 1; j < this.gridSize - 1; j++) {
+                        if (this.orbital.massField[i][j] > 0.01) {
+                            const r_x = i - center;
+                            const r_y = j - center;
+                            const r_mag = Math.sqrt(r_x ** 2 + r_y ** 2) + 1e-12;
+                            
+                            const v = this.orbital.velocityField[i][j];
+                            const v_mag = Math.sqrt(v.x ** 2 + v.y ** 2);
+                            const omega = v_mag / (r_mag + 1e-12);
+                            
+                            const mbtFactor = this.masterMBTFunction(r_mag, v_mag, omega, this.timeStep * dt, 'orbital');
+                            
+                            // MBT acceleration
+                            const a_magnitude = this.alpha * v_mag ** 2 / (r_mag + 1e-12);
+                            const a_magnitude_mbt = a_magnitude * mbtFactor;
+                            
+                            if (r_mag > 0) {
+                                this.orbital.velocityField[i][j].x += -a_magnitude_mbt * r_x / r_mag * dt;
+                                this.orbital.velocityField[i][j].y += -a_magnitude_mbt * r_y / r_mag * dt;
+                            }
+                        }
+                        
+                        // Curvature field from mass distribution
+                        let massSum = 0;
+                        let count = 0;
+                        for (let di = -2; di <= 2; di++) {
+                            for (let dj = -2; dj <= 2; dj++) {
+                                const ni = i + di;
+                                const nj = j + dj;
+                                if (ni >= 0 && ni < this.gridSize && nj >= 0 && nj < this.gridSize) {
+                                    massSum += this.orbital.massField[ni][nj];
+                                    count++;
+                                }
+                            }
+                        }
+                        const avgMass = count > 0 ? massSum / count : 0;
+                        const r_center = Math.sqrt((i - center) ** 2 + (j - center) ** 2) + 1;
+                        this.orbital.curvatureField[i][j] = avgMass / (r_center ** 2);
+                    }
+                }
+            }
+            
+            evolveCosmic(dt) {
+                const expansionRate = 2.3e-18 * dt;
+                const center = this.gridSize / 2;
+                
+                // Cosmic structure evolution with MBT
+                for (let i = 0; i < this.gridSize; i += 2) { // Sample for performance
+                    for (let j = 0; j < this.gridSize; j += 2) {
+                        const r = Math.sqrt((i - center) ** 2 + (j - center) ** 2);
+                        const density = this.cosmic.densityField[i][j];
+                        const v = density - 1.0; // Deviation from mean density
+                        
+                        const mbtFactor = this.masterMBTFunction(r, Math.abs(v), expansionRate, this.timeStep * dt, 'cosmic');
+                        
+                        // Structure growth
+                        const structureGrowth = mbtFactor * v * dt * 0.1;
+                        this.cosmic.densityField[i][j] += structureGrowth;
+                    }
+                }
+                
+                // Diffusion and clustering
+                for (let i = 1; i < this.gridSize - 1; i++) {
+                    for (let j = 1; j < this.gridSize - 1; j++) {
+                        const laplacian = 
+                            this.cosmic.densityField[i-1][j] + this.cosmic.densityField[i+1][j] +
+                            this.cosmic.densityField[i][j-1] + this.cosmic.densityField[i][j+1] - 
+                            4 * this.cosmic.densityField[i][j];
+                        
+                        this.cosmic.densityField[i][j] += 0.001 * dt * laplacian;
+                        
+                        // Structure field (negative Laplacian)
+                        this.cosmic.structureField[i][j] = -laplacian;
+                    }
+                }
+            }
+            
+            evolveEnergy(dt) {
+                const center = this.gridSize / 2;
+                
+                // Create dynamic energy sources from other scales
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        // Energy input from quantum fluctuations
+                        const quantumEnergy = this.quantum.psi[i][j].real ** 2 + this.quantum.psi[i][j].imag ** 2;
+                        
+                        // Energy from atomic transitions
+                        let atomicEnergy = 0;
+                        for (let shell = 0; shell < this.atomic.electronDensity.length; shell++) {
+                            atomicEnergy += this.atomic.electronDensity[shell][i][j] * (shell + 1);
+                        }
+                        
+                        // Energy from molecular vibrations
+                        let molecularEnergy = 0;
+                        for (let mode = 0; mode < this.molecular.vibrationalModes.length; mode++) {
+                            molecularEnergy += Math.abs(this.molecular.vibrationalModes[mode][i][j]);
+                        }
+                        
+                        // Energy from gravitational dynamics
+                        const orbitalEnergy = this.orbital.massField[i][j] * 
+                            (this.orbital.velocityField[i][j].x ** 2 + this.orbital.velocityField[i][j].y ** 2);
+                        
+                        // Total energy input
+                        const totalEnergyInput = quantumEnergy * 0.1 + atomicEnergy * 0.01 + 
+                                               molecularEnergy * 0.05 + orbitalEnergy * 0.001;
+                        
+                        this.energy.plasmaField[i][j] += totalEnergyInput * dt;
+                    }
+                }
+                
+                // Plasma field evolution with wave dynamics
+                for (let i = 1; i < this.gridSize - 1; i++) {
+                    for (let j = 1; j < this.gridSize - 1; j++) {
+                        // Wave-like plasma propagation
+                        const laplacian = 
+                            this.energy.plasmaField[i-1][j] + this.energy.plasmaField[i+1][j] +
+                            this.energy.plasmaField[i][j-1] + this.energy.plasmaField[i][j+1] - 
+                            4 * this.energy.plasmaField[i][j];
+                        
+                        this.energy.plasmaField[i][j] += dt * laplacian * 0.1;
+                        
+                        // Current density from plasma motion
+                        const current_x = this.energy.plasmaField[i+1][j] - this.energy.plasmaField[i-1][j];
+                        const current_y = this.energy.plasmaField[i][j+1] - this.energy.plasmaField[i][j-1];
+                        
+                        // Magnetic field evolution (Faraday's law)
+                        const curl_E_x = 0; // Simplified
+                        const curl_E_y = 0;
+                        const curl_E_z = current_x - current_y; // From plasma motion
+                        
+                        this.energy.magneticField[i][j].x += dt * (-curl_E_z * 0.1);
+                        this.energy.magneticField[i][j].y += dt * (curl_E_z * 0.1);
+                        this.energy.magneticField[i][j].z += dt * (current_x + current_y) * 0.05;
+                        
+                        // Magnetic field rotation for visual dynamics
+                        const B = this.energy.magneticField[i][j];
+                        const rotation = 0.01 * dt * this.timeStep;
+                        this.energy.magneticField[i][j].x = B.x * Math.cos(rotation) - B.y * Math.sin(rotation);
+                        this.energy.magneticField[i][j].y = B.x * Math.sin(rotation) + B.y * Math.cos(rotation);
+                        
+                        // Plasma evolution with MBT
+                        const r = Math.sqrt((i - center) ** 2 + (j - center) ** 2) + 1e-12;
+                        const v_plasma = Math.sqrt(current_x ** 2 + current_y ** 2);
+                        const omega = Math.sin(this.timeStep * 0.1) * 1e6; // Dynamic frequency
+                        
+                        const mbtFactor = this.masterMBTFunction(r, v_plasma, omega, this.timeStep * dt, 'orbital');
+                        this.energy.plasmaField[i][j] += dt * mbtFactor * Math.sin(this.timeStep * 0.05) * 0.1;
+                        
+                        // Plasma instabilities and turbulence
+                        if (Math.abs(this.energy.plasmaField[i][j]) > 0.5) {
+                            const turbulence = (Math.random() - 0.5) * 0.1;
+                            this.energy.plasmaField[i][j] += turbulence;
+                        }
+                        
+                        // Energy dissipation
+                        this.energy.plasmaField[i][j] *= (1 - dt * 0.01);
+                        this.energy.magneticField[i][j].x *= (1 - dt * 0.005);
+                        this.energy.magneticField[i][j].y *= (1 - dt * 0.005);
+                        this.energy.magneticField[i][j].z *= (1 - dt * 0.005);
+                    }
+                }
+                
+                // Add periodic energy bursts (solar flares, cosmic ray events)
+                if (this.timeStep % 50 === 0) {
+                    const burstX = Math.floor(Math.random() * this.gridSize);
+                    const burstY = Math.floor(Math.random() * this.gridSize);
+                    const burstSize = 3 + Math.floor(Math.random() * 5);
+                    
+                    for (let i = Math.max(0, burstX - burstSize); i < Math.min(this.gridSize, burstX + burstSize); i++) {
+                        for (let j = Math.max(0, burstY - burstSize); j < Math.min(this.gridSize, burstY + burstSize); j++) {
+                            this.energy.plasmaField[i][j] += Math.random() * 2.0;
+                            this.energy.magneticField[i][j].z += Math.random() * 1.0 - 0.5;
+                        }
+                    }
+                }
+                
+                // Create spiral patterns in magnetic field
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const r = Math.sqrt((i - center) ** 2 + (j - center) ** 2);
+                        const theta = Math.atan2(j - center, i - center);
+                        const spiral = Math.sin(theta * 3 + r * 0.1 - this.timeStep * 0.05);
+                        
+                        this.energy.magneticField[i][j].x += spiral * 0.01;
+                        this.energy.magneticField[i][j].y += Math.cos(theta * 3 + r * 0.1 - this.timeStep * 0.05) * 0.01;
+                    }
+                }
+            }
+            
+            crossScaleCoupling() {
+                // QUANTUM → ATOMIC: Wave function collapse to electron density
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const psiDensity = this.quantum.psi[i][j].real ** 2 + this.quantum.psi[i][j].imag ** 2;
+                        
+                        // Contribute to first few electron shells
+                        for (let shell = 0; shell < Math.min(3, this.atomic.electronDensity.length); shell++) {
+                            this.atomic.electronDensity[shell][i][j] += psiDensity * 0.01 / (shell + 1);
+                        }
+                    }
+                }
+                
+                // ATOMIC → MOLECULAR: Electron sharing creates bonds
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        let totalElectron = 0;
+                        for (let shell = 0; shell < this.atomic.electronDensity.length; shell++) {
+                            totalElectron += this.atomic.electronDensity[shell][i][j];
+                        }
+                        this.molecular.bondField[i][j] += totalElectron * 0.001;
+                    }
+                }
+                
+                // MOLECULAR → ORBITAL: Molecular masses contribute to gravitational field
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        this.orbital.massField[i][j] += this.molecular.bondField[i][j] * 1e-10;
+                    }
+                }
+                
+                // ORBITAL → COSMIC: Local mass distributions seed cosmic structure
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        this.cosmic.densityField[i][j] += this.orbital.massField[i][j] * 1e-15;
+                    }
+                }
+                
+                // ENERGY FEEDBACK: High energy affects lower scales
+                let plasmaEnergy = 0;
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        plasmaEnergy += Math.abs(this.energy.plasmaField[i][j]);
+                    }
+                }
+                
+                if (plasmaEnergy > 1.0) {
+                    // Plasma heating affects molecular vibrations
+                    for (let mode = 0; mode < this.molecular.vibrationalModes.length; mode++) {
+                        for (let i = 0; i < this.gridSize; i++) {
+                            for (let j = 0; j < this.gridSize; j++) {
+                                this.molecular.vibrationalModes[mode][i][j] += plasmaEnergy * 0.0001;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            step() {
+                const dt = 1e-15; // Base time step
+                
+                // Evolve all scales
+                this.evolveQuantum(dt);
+                this.evolveAtomic(dt);
+                this.evolveMolecular(dt);
+                this.evolveOrbital(dt);
+                this.evolveCosmic(dt);
+                this.evolveEnergy(dt);
+                
+                // Cross-scale coupling
+                this.crossScaleCoupling();
+                
+                this.timeStep++;
+                this.updateMetrics();
+                this.render();
+            }
+            
+            updateMetrics() {
+                // Calculate metrics
+                let quantumEnergy = 0;
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        quantumEnergy += this.quantum.psi[i][j].real ** 2 + this.quantum.psi[i][j].imag ** 2;
+                    }
+                }
+                
+                let atomicPopulation = 0;
+                for (let shell = 0; shell < this.atomic.electronDensity.length; shell++) {
+                    for (let i = 0; i < this.gridSize; i++) {
+                        for (let j = 0; j < this.gridSize; j++) {
+                            atomicPopulation += this.atomic.electronDensity[shell][i][j];
+                        }
+                    }
+                }
+                
+                let molecularBonds = 0;
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        molecularBonds += this.molecular.bondField[i][j];
+                    }
+                }
+                
+                let orbitalMass = 0;
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        orbitalMass += this.orbital.massField[i][j];
+                    }
+                }
+                
+                let cosmicMean = 0;
+                let cosmicVar = 0;
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        cosmicMean += this.cosmic.densityField[i][j];
+                    }
+                }
+                cosmicMean /= (this.gridSize * this.gridSize);
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        cosmicVar += (this.cosmic.densityField[i][j] - cosmicMean) ** 2;
+                    }
+                }
+                cosmicVar /= (this.gridSize * this.gridSize);
+                
+                // Count emergent phenomena
+                let phenomena = 0;
+                if (quantumEnergy > 0.1) phenomena++;
+                if (atomicPopulation > 100) phenomena++;
+                if (molecularBonds > 50) phenomena++;
+                if (orbitalMass > 10) phenomena++;
+                if (cosmicVar > 0.01) phenomena++;
+                
+                // Update display
+                document.getElementById('quantumEnergy').textContent = quantumEnergy.toFixed(2);
+                document.getElementById('atomicPopulation').textContent = Math.floor(atomicPopulation);
+                document.getElementById('molecularBonds').textContent = molecularBonds.toFixed(2);
+                document.getElementById('orbitalMass').textContent = orbitalMass.toFixed(2);
+                document.getElementById('cosmicStructure').textContent = cosmicVar.toFixed(6);
+                document.getElementById('emergentPhenomena').textContent = phenomena;
+                
+                // Log interesting events
+                if (this.timeStep % 100 === 0) {
+                    this.log(`Step ${this.timeStep}: Q=${quantumEnergy.toFixed(2)}, A=${Math.floor(atomicPopulation)}, M=${molecularBonds.toFixed(1)}, O=${orbitalMass.toFixed(1)}, C=${cosmicVar.toFixed(4)}`);
+                }
+            }
+            
+            render() {
+                this.renderQuantum();
+                this.renderAtomic();
+                this.renderMolecular();
+                this.renderOrbital();
+                this.renderCosmic();
+                this.renderEnergy();
+            }
+            
+            renderQuantum() {
+                const ctx = this.contexts.quantum;
+                const canvas = this.canvases.quantum;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.createImageData(canvas.width, canvas.height);
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const x = Math.floor((i / this.gridSize) * canvas.width);
+                        const y = Math.floor((j / this.gridSize) * canvas.height);
+                        
+                        if (x < canvas.width && y < canvas.height) {
+                            const intensity = Math.sqrt(
+                                this.quantum.psi[i][j].real ** 2 + this.quantum.psi[i][j].imag ** 2
+                            );
+                            const vortex = Math.abs(this.quantum.vortices[i][j]);
+                            
+                            const pixelIndex = (y * canvas.width + x) * 4;
+                            imageData.data[pixelIndex] = Math.min(255, intensity * 255 * 10);     // Red
+                            imageData.data[pixelIndex + 1] = Math.min(255, vortex * 255 * 50);   // Green
+                            imageData.data[pixelIndex + 2] = Math.min(255, intensity * 128 + vortex * 127); // Blue
+                            imageData.data[pixelIndex + 3] = 255; // Alpha
+                        }
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+            
+            renderAtomic() {
+                const ctx = this.contexts.atomic;
+                const canvas = this.canvases.atomic;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.createImageData(canvas.width, canvas.height);
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const x = Math.floor((i / this.gridSize) * canvas.width);
+                        const y = Math.floor((j / this.gridSize) * canvas.height);
+                        
+                        if (x < canvas.width && y < canvas.height) {
+                            let totalDensity = 0;
+                            let shellColors = [0, 0, 0];
+                            
+                            for (let shell = 0; shell < Math.min(3, this.atomic.electronDensity.length); shell++) {
+                                const density = this.atomic.electronDensity[shell][i][j];
+                                totalDensity += density;
+                                shellColors[shell % 3] += density;
+                            }
+                            
+                            const pixelIndex = (y * canvas.width + x) * 4;
+                            imageData.data[pixelIndex] = Math.min(255, shellColors[0] * 100);     // Red
+                            imageData.data[pixelIndex + 1] = Math.min(255, shellColors[1] * 150); // Green
+                            imageData.data[pixelIndex + 2] = Math.min(255, shellColors[2] * 200); // Blue
+                            imageData.data[pixelIndex + 3] = 255; // Alpha
+                        }
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+            
+            renderMolecular() {
+                const ctx = this.contexts.molecular;
+                const canvas = this.canvases.molecular;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.createImageData(canvas.width, canvas.height);
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const x = Math.floor((i / this.gridSize) * canvas.width);
+                        const y = Math.floor((j / this.gridSize) * canvas.height);
+                        
+                        if (x < canvas.width && y < canvas.height) {
+                            const bondStrength = this.molecular.bondField[i][j];
+                            
+                            let vibrationalIntensity = 0;
+                            for (let mode = 0; mode < Math.min(3, this.molecular.vibrationalModes.length); mode++) {
+                                vibrationalIntensity += Math.abs(this.molecular.vibrationalModes[mode][i][j]);
+                            }
+                            
+                            const pixelIndex = (y * canvas.width + x) * 4;
+                            imageData.data[pixelIndex] = Math.min(255, bondStrength * 255);       // Red
+                            imageData.data[pixelIndex + 1] = Math.min(255, vibrationalIntensity * 100); // Green
+                            imageData.data[pixelIndex + 2] = Math.min(255, bondStrength * 128 + vibrationalIntensity * 64); // Blue
+                            imageData.data[pixelIndex + 3] = 255; // Alpha
+                        }
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+            
+            renderOrbital() {
+                const ctx = this.contexts.orbital;
+                const canvas = this.canvases.orbital;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.createImageData(canvas.width, canvas.height);
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const x = Math.floor((i / this.gridSize) * canvas.width);
+                        const y = Math.floor((j / this.gridSize) * canvas.height);
+                        
+                        if (x < canvas.width && y < canvas.height) {
+                            const mass = this.orbital.massField[i][j];
+                            const curvature = this.orbital.curvatureField[i][j];
+                            const velocity = Math.sqrt(
+                                this.orbital.velocityField[i][j].x ** 2 + 
+                                this.orbital.velocityField[i][j].y ** 2
+                            );
+                            
+                            const pixelIndex = (y * canvas.width + x) * 4;
+                            imageData.data[pixelIndex] = Math.min(255, Math.log10(mass + 1) * 100);     // Red
+                            imageData.data[pixelIndex + 1] = Math.min(255, curvature * 1000);          // Green
+                            imageData.data[pixelIndex + 2] = Math.min(255, velocity * 500);            // Blue
+                            imageData.data[pixelIndex + 3] = 255; // Alpha
+                        }
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+            
+            renderCosmic() {
+                const ctx = this.contexts.cosmic;
+                const canvas = this.canvases.cosmic;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.createImageData(canvas.width, canvas.height);
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const x = Math.floor((i / this.gridSize) * canvas.width);
+                        const y = Math.floor((j / this.gridSize) * canvas.height);
+                        
+                        if (x < canvas.width && y < canvas.height) {
+                            const density = this.cosmic.densityField[i][j];
+                            const structure = Math.abs(this.cosmic.structureField[i][j]);
+                            
+                            const pixelIndex = (y * canvas.width + x) * 4;
+                            const intensity = Math.max(0, Math.min(255, (density - 0.8) * 500));
+                            imageData.data[pixelIndex] = intensity;                                // Red
+                            imageData.data[pixelIndex + 1] = Math.min(255, structure * 200);     // Green
+                            imageData.data[pixelIndex + 2] = Math.min(255, density * 100);       // Blue
+                            imageData.data[pixelIndex + 3] = 255; // Alpha
+                        }
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            }
+            
+            renderEnergy() {
+                const ctx = this.contexts.energy;
+                const canvas = this.canvases.energy;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.createImageData(canvas.width, canvas.height);
+                
+                // Find max values for proper scaling
+                let maxPlasma = 0;
+                let maxMagnetic = 0;
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const plasma = Math.abs(this.energy.plasmaField[i][j]);
+                        const magnetic = Math.sqrt(
+                            this.energy.magneticField[i][j].x ** 2 + 
+                            this.energy.magneticField[i][j].y ** 2 + 
+                            this.energy.magneticField[i][j].z ** 2
+                        );
+                        maxPlasma = Math.max(maxPlasma, plasma);
+                        maxMagnetic = Math.max(maxMagnetic, magnetic);
+                    }
+                }
+                
+                // Prevent division by zero
+                maxPlasma = Math.max(maxPlasma, 0.01);
+                maxMagnetic = Math.max(maxMagnetic, 0.01);
+                
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const x = Math.floor((i / this.gridSize) * canvas.width);
+                        const y = Math.floor((j / this.gridSize) * canvas.height);
+                        
+                        if (x < canvas.width && y < canvas.height) {
+                            const plasma = Math.abs(this.energy.plasmaField[i][j]);
+                            const magnetic = Math.sqrt(
+                                this.energy.magneticField[i][j].x ** 2 + 
+                                this.energy.magneticField[i][j].y ** 2 + 
+                                this.energy.magneticField[i][j].z ** 2
+                            );
+                            
+                            // Normalized intensities
+                            const plasmaIntensity = (plasma / maxPlasma) * 255;
+                            const magneticIntensity = (magnetic / maxMagnetic) * 255;
+                            
+                            // Create dynamic color patterns
+                            const time = this.timeStep * 0.1;
+                            const phase = Math.sin(time + i * 0.1 + j * 0.1) * 0.5 + 0.5;
+                            
+                            const pixelIndex = (y * canvas.width + x) * 4;
+                            
+                            // Plasma = Red/Orange, Magnetic = Blue/Cyan, Combined = Purple/White
+                            imageData.data[pixelIndex] = Math.min(255, plasmaIntensity + phase * 50);        // Red
+                            imageData.data[pixelIndex + 1] = Math.min(255, (plasmaIntensity + magneticIntensity) * 0.5 + phase * 30); // Green
+                            imageData.data[pixelIndex + 2] = Math.min(255, magneticIntensity + (1-phase) * 50); // Blue
+                            imageData.data[pixelIndex + 3] = 255; // Alpha
+                        }
+                    }
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+                
+                // Add dynamic overlay patterns
+                ctx.globalAlpha = 0.3;
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                
+                // Draw magnetic field lines
+                const step = 8;
+                for (let i = 0; i < this.gridSize; i += step) {
+                    for (let j = 0; j < this.gridSize; j += step) {
+                        const x = (i / this.gridSize) * canvas.width;
+                        const y = (j / this.gridSize) * canvas.height;
+                        
+                        const Bx = this.energy.magneticField[i][j].x;
+                        const By = this.energy.magneticField[i][j].y;
+                        const length = Math.sqrt(Bx * Bx + By * By);
+                        
+                        if (length > 0.01) {
+                            ctx.beginPath();
+                            ctx.moveTo(x, y);
+                            ctx.lineTo(x + (Bx / length) * 10, y + (By / length) * 10);
+                            ctx.stroke();
+                        }
+                    }
+                }
+                
+                ctx.globalAlpha = 1.0;
+            }
+            
+            setupControls() {
+                // Parameter sliders
+                ['alpha', 'beta', 'gamma', 'delta', 'speed'].forEach(param => {
+                    const slider = document.getElementById(param);
+                    const valueSpan = document.getElementById(`${param}-value`);
+                    
+                    slider.addEventListener('input', (e) => {
+                        const value = parseFloat(e.target.value);
+                        if (param === 'speed') {
+                            valueSpan.textContent = `${value}ms`;
+                            if (this.animationId) {
+                                clearInterval(this.animationId);
+                                if (this.isRunning) {
+                                    this.startAnimation();
+                                }
+                            }
+                        } else {
+                            this[param] = value;
+                            valueSpan.textContent = value.toFixed(2);
+                            this.log(`Parameter ${param} updated to ${value.toFixed(2)}`);
+                        }
+                    });
+                });
+                
+                // Play/Pause button
+                document.getElementById('playPause').addEventListener('click', () => {
+                    if (this.isRunning) {
+                        this.stop();
+                    } else {
+                        this.start();
+                    }
+                });
+                
+                // Reset button
+                document.getElementById('reset').addEventListener('click', () => {
+                    this.reset();
+                });
+            }
+            
+            start() {
+                this.isRunning = true;
+                document.getElementById('playPause').textContent = '⏸️ Pause Simulation';
+                this.startAnimation();
+                this.log("Universe simulation started");
+            }
+            
+            stop() {
+                this.isRunning = false;
+                document.getElementById('playPause').textContent = '▶️ Start Simulation';
+                if (this.animationId) {
+                    clearInterval(this.animationId);
+                }
+                this.log("Universe simulation paused");
+            }
+            
+            reset() {
+                this.stop();
+                this.timeStep = 0;
+                this.initializeFields();
+                this.render();
+                this.updateMetrics();
+                this.log("Universe reset to initial conditions");
+            }
+            
+            startAnimation() {
+                const speed = parseInt(document.getElementById('speed').value);
+                this.animationId = setInterval(() => {
+                    if (this.isRunning) {
+                        this.step();
+                    }
+                }, speed);
+            }
+            
+            log(message) {
+                const logs = document.getElementById('logs');
+                const timestamp = new Date().toLocaleTimeString();
+                logs.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+                logs.scrollTop = logs.scrollHeight;
+                
+                // Keep only last 50 log entries
+                const logEntries = logs.children;
+                while (logEntries.length > 50) {
+                    logs.removeChild(logEntries[0]);
+                }
+            }
+        }
+        
+        // Initialize the engine when page loads
+        window.addEventListener('load', () => {
+            window.engine = new MBTPhysicsEngine();
+        });
+    </script>
+</body>
+</html>
